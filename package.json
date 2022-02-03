@@ -6,7 +6,7 @@
     "coindog": "bin/coindog.js"
   },
   "scripts": {
-    "debug": "node bin/coindog.js",
+    "coindog": "node bin/coindog.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
@@ -22,6 +22,8 @@
   "dependencies": {
     "ccxt": "^1.71.96",
     "commander": "^9.0.0",
+    "easy-table": "^1.2.0",
+    "fuse.js": "^6.5.3",
     "terminal-kit": "^2.4.0"
   }
 }

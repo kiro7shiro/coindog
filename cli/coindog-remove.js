@@ -23,24 +23,21 @@ terminal.on('key', function (name) {
 terminal.grabInput(true)
 
 program
-    .description('search trading symbol(s)')
-    .argument('key', 'key to search')
-    .action(async function (key) {
-        terminal(`searching '${key}'... `)
-        const spinner = await terminal.spinner()
-        const results = await watchdog.search(key)
-        const items = results.reduce(function (prev, curr) {
-            if (curr.score < 0.1) prev.push(`${curr.item}`)
-            return prev
-        }, [])
-        spinner.hidden = true
-        if (items.length) {
-            terminal(`\nselect symbol to watch:\n`)
+    .description('removing a symbol from watch')
+    .argument('[symbol]', 'symbol to remove')
+    .action(async function (symbol) {
+        if (!symbol) {
+            const items = watchdog.symbols.reduce(function (prev, curr) {
+                prev.push(curr.symbol)
+                return prev
+            }, [])
+            terminal(`select a symbol to remove:\n`)
             const select = await terminal.singleColumnMenu(items).promise
-            await watchdog.save(select.selectedText)
-            terminal(`\n${select.selectedText} saved...\n`)
-        } else {
-            terminal(`\nno markets found for: ${key}\n`)
+            symbol = select.selectedText
+        }
+        const result = await watchdog.remove(symbol)
+        if (result) {
+            terminal(`\n${result} removed...`)
         }
         terminate()
     })
