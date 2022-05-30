@@ -6,7 +6,6 @@
     "coindog": "bin/coindog.js"
   },
   "scripts": {
-    "coindog": "node bin/coindog.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
@@ -14,7 +13,7 @@
     "url": "git+https://github.com/kiro7shiro/coindog.git"
   },
   "author": "kiro7shiro",
-  "license": "MIT",
+  "license": "ISC",
   "bugs": {
     "url": "https://github.com/kiro7shiro/coindog/issues"
   },

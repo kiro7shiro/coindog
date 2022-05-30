@@ -1,10 +1,10 @@
 const { Command } = require('commander')
-const { BITFINEX } = require('../config/config.js')
-const { Coindog } = require('../lib/Coindog.js')
 const termkit = require('../node_modules/terminal-kit/lib/termkit.js')
 const terminal = termkit.terminal
+const credentials = require('../credentials/credentials.json')
+const { Coindog } = require('../src/Coindog.js')
 
-const watchdog = new Coindog(BITFINEX)
+const watchdog = new Coindog(credentials.BITFINEX)
 const program = new Command
 
 function terminate() {

@@ -17,7 +17,7 @@ class Coindog extends EventEmitter {
             enableRateLimit: true
         })
         this.symbols = []
-        this.symbolsPath = './data/symbols.json'
+        this.symbolsPath = ''
         this.timer = {
             last: 0,
             handle: 0,
@@ -25,7 +25,8 @@ class Coindog extends EventEmitter {
         }
         this.load()
     }
-    load() {
+    load({ symbolsPath } = {}) {
+        if (symbolsPath) this.symbolsPath = symbolsPath
         this.symbols = JSON.parse(fs.readFileSync(this.symbolsPath))
     }
     async remove(symbol) {
