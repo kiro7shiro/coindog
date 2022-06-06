@@ -1,13 +1,13 @@
 const { Command } = require('commander')
-const { cliWatch, terminate, terminal } = require('../src/cli.js')
+const { cliInfo, terminate, terminal } = require('../src/cli.js')
 
 const program = new Command
 
 program
-    .description('watch symbol(s) for buy or sell signals')
+    .description('showing exchange info')
     .action(async function () {
         terminal.grabInput(true)
-        await cliWatch()
+        await cliInfo()
         terminate()
     })
 
