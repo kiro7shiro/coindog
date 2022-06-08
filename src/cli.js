@@ -5,8 +5,21 @@ const { Coindog } = require('../src/Coindog.js')
 const Table = require('easy-table')
 
 const watchdog = new Coindog(credentials.BITFINEX, '../data/symbols.json')
+async function init() {
+    await watchdog.initialize()
+}
+init()
 
 // *helper functions
+
+function filterObject(raw, allowed) {
+    return Object.keys(raw)
+        .filter(key => allowed.includes(key))
+        .reduce((obj, key) => {
+            obj[key] = raw[key]
+            return obj
+        }, {})
+}
 
 function statusToTable(status) {
     status.status = status.status === 'ok' ? terminal.str.green(status.status) : terminal.str.red(status.status)
@@ -84,6 +97,7 @@ async function cliSearch(key) {
 
 async function cliRemove(symbol) {
     if (!symbol) {
+        if (!watchdog.initialized) await watchdog.initialize()
         const items = watchdog.markets.reduce(function (prev, curr) {
             prev.push(curr.symbol)
             return prev
@@ -165,38 +179,45 @@ async function cliWatch(markets) {
         })
     }
 
+    let marketsData = []
     let marketsText = ''
     let balanceText = ''
 
-    const updateMarkets = function (market) {
+    const updateMarkets = function (info) {
 
-        let marketsData = []
+        // init text
         if (!marketsText.length) {
             marketsData = watchdog.markets.reduce(function (accu, curr) {
-                accu.push({
-                    symbol: curr.symbol,
-                    since: '',
-                    candles: '',
-                    position: '',
-                    trend: '',
-                    signal: ''
-                })
+                accu.push({ symbol: curr.symbol })
                 return accu
             }, [])
             marketsText = Table.print(marketsData)
         }
-        marketsData = marketsText.split('\n')
 
-        if (market) {
-            const symbolIdx = marketsData.findIndex(m => m.symbol === market.symbol)
-            const last = market.candles[market.candles.length - 1]
-            //const last = market.candles[0]
-            marketsData[symbolIdx].since = new Date(last.timestamp).toLocaleTimeString()
-            marketsData[symbolIdx].candles = market.candles.length
+        // update market text
+        if (info) {
+            const newData = info /* filterObject(info, ['symbol', 'first', 'last', 'fetched', 'position', 'trend', 'signal']) */
+            let mIdx = marketsData.findIndex(m => m.symbol === info.symbol)
+            if (mIdx < 0) {
+                marketsData.push(newData)
+                mIdx = marketsData.length - 1
+            } else {
+                marketsData[mIdx] = Object.assign(marketsData[mIdx], newData)
+            }
+            // highlight updated row
+            const table = Table.print(marketsData).split('\n').map((line, index) => {
+                if (index < 2) return line
+                if (index === mIdx + 2) {
+                    return terminal.str.black.bgWhite(line)
+                } else {
+                    return terminal.str.defaultColor.bgDefaultColor(line)
+                }
+            })
+            marketsText = table.join('\n')
+        } else {
+            marketsText = Table.print(marketsData)
         }
 
-        marketsText = marketsData.join('\n')
-        
     }
 
     const updateBalance = function (balance) {
@@ -207,7 +228,7 @@ async function cliWatch(markets) {
         const marketsWidth = marketsText.split('\n')[0].length
         // TODO : move resizing to resize() function
         marketsBox.setSizeAndPosition({ x: 1, y: title.outputY + 2, width: marketsWidth, height: terminal.height / 2 - 1 })
-        marketsBox.setContent(marketsText)
+        marketsBox.setContent(marketsText, 'legacyAnsi')
     }
 
     const drawBalance = function () {
@@ -236,16 +257,16 @@ async function cliWatch(markets) {
     watchdog.on('fetching', function (symbol) {
         messageBox.setContent(`fetching ${symbol} ...`)
     })
-    watchdog.on('fetched', function (market) {
-        messageBox.setContent(`fetching ${market.symbol} ...done`)
-        updateMarkets(market)
+    watchdog.on('fetched', function (info) {
+        messageBox.setContent(`fetching ${info.symbol} ...done`)
+        updateMarkets(info)
         drawMarkets()
     })
     watchdog.on('pause', function (remaining) {
         messageBox.setContent(`pause - remaining time ${(remaining / 1000).toFixed(0)} ...`)
     })
 
-    await watchdog.watch()
+    await watchdog.watch2()
 
 }
 

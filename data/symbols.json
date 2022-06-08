@@ -4,6 +4,144 @@
             "leverage": {},
             "amount": {
                 "min": 2,
+                "max": 1000000
+            },
+            "price": {
+                "min": 1e-8
+            },
+            "cost": {}
+        },
+        "precision": {
+            "price": 5,
+            "amount": 8
+        },
+        "tierBased": true,
+        "percentage": true,
+        "taker": 0.002,
+        "maker": 0.001,
+        "feeSide": "get",
+        "tiers": {
+            "taker": [
+                [
+                    0,
+                    0.002
+                ],
+                [
+                    500000,
+                    0.002
+                ],
+                [
+                    1000000,
+                    0.002
+                ],
+                [
+                    2500000,
+                    0.002
+                ],
+                [
+                    5000000,
+                    0.002
+                ],
+                [
+                    7500000,
+                    0.002
+                ],
+                [
+                    10000000,
+                    0.0018
+                ],
+                [
+                    15000000,
+                    0.0016
+                ],
+                [
+                    20000000,
+                    0.0014
+                ],
+                [
+                    25000000,
+                    0.0012
+                ],
+                [
+                    30000000,
+                    0.001
+                ]
+            ],
+            "maker": [
+                [
+                    0,
+                    0.001
+                ],
+                [
+                    500000,
+                    0.0008
+                ],
+                [
+                    1000000,
+                    0.0006
+                ],
+                [
+                    2500000,
+                    0.0004
+                ],
+                [
+                    5000000,
+                    0.0002
+                ],
+                [
+                    7500000,
+                    0
+                ],
+                [
+                    10000000,
+                    0
+                ],
+                [
+                    15000000,
+                    0
+                ],
+                [
+                    20000000,
+                    0
+                ],
+                [
+                    25000000,
+                    0
+                ],
+                [
+                    30000000,
+                    0
+                ]
+            ]
+        },
+        "id": "tUDCUSD",
+        "symbol": "USDC/USD",
+        "base": "USDC",
+        "quote": "USD",
+        "baseId": "fUDC",
+        "quoteId": "fUSD",
+        "active": true,
+        "info": {
+            "pair": "udcusd",
+            "price_precision": "5",
+            "initial_margin": "30.0",
+            "minimum_margin": "15.0",
+            "maximum_order_size": "1000000.0",
+            "minimum_order_size": "2.0",
+            "expiration": "NA",
+            "margin": false
+        },
+        "type": "spot",
+        "swap": false,
+        "spot": true,
+        "margin": false,
+        "future": false
+    },
+    {
+        "limits": {
+            "leverage": {},
+            "amount": {
+                "min": 6,
                 "max": 2000000
             },
             "price": {
@@ -127,7 +265,7 @@
             "initial_margin": "20.0",
             "minimum_margin": "10.0",
             "maximum_order_size": "2000000.0",
-            "minimum_order_size": "2.0",
+            "minimum_order_size": "6.0",
             "expiration": "NA",
             "margin": true
         },
@@ -141,8 +279,8 @@
         "limits": {
             "leverage": {},
             "amount": {
-                "min": 0.04,
-                "max": 5000
+                "min": 0.00006,
+                "max": 2000
             },
             "price": {
                 "min": 1e-8
@@ -252,158 +390,20 @@
                 ]
             ]
         },
-        "id": "tLTCUSD",
-        "symbol": "LTC/USD",
-        "base": "LTC",
+        "id": "tBTCUSD",
+        "symbol": "BTC/USD",
+        "base": "BTC",
         "quote": "USD",
-        "baseId": "fLTC",
+        "baseId": "fBTC",
         "quoteId": "fUSD",
         "active": true,
         "info": {
-            "pair": "ltcusd",
+            "pair": "btcusd",
             "price_precision": "5",
-            "initial_margin": "20.0",
-            "minimum_margin": "10.0",
-            "maximum_order_size": "5000.0",
-            "minimum_order_size": "0.04",
-            "expiration": "NA",
-            "margin": true
-        },
-        "type": "spot",
-        "swap": false,
-        "spot": true,
-        "margin": true,
-        "future": false
-    },
-    {
-        "limits": {
-            "leverage": {},
-            "amount": {
-                "min": 0.04,
-                "max": 5000
-            },
-            "price": {
-                "min": 1e-8
-            },
-            "cost": {}
-        },
-        "precision": {
-            "price": 5,
-            "amount": 8
-        },
-        "tierBased": true,
-        "percentage": true,
-        "taker": 0.002,
-        "maker": 0.001,
-        "feeSide": "get",
-        "tiers": {
-            "taker": [
-                [
-                    0,
-                    0.002
-                ],
-                [
-                    500000,
-                    0.002
-                ],
-                [
-                    1000000,
-                    0.002
-                ],
-                [
-                    2500000,
-                    0.002
-                ],
-                [
-                    5000000,
-                    0.002
-                ],
-                [
-                    7500000,
-                    0.002
-                ],
-                [
-                    10000000,
-                    0.0018
-                ],
-                [
-                    15000000,
-                    0.0016
-                ],
-                [
-                    20000000,
-                    0.0014
-                ],
-                [
-                    25000000,
-                    0.0012
-                ],
-                [
-                    30000000,
-                    0.001
-                ]
-            ],
-            "maker": [
-                [
-                    0,
-                    0.001
-                ],
-                [
-                    500000,
-                    0.0008
-                ],
-                [
-                    1000000,
-                    0.0006
-                ],
-                [
-                    2500000,
-                    0.0004
-                ],
-                [
-                    5000000,
-                    0.0002
-                ],
-                [
-                    7500000,
-                    0
-                ],
-                [
-                    10000000,
-                    0
-                ],
-                [
-                    15000000,
-                    0
-                ],
-                [
-                    20000000,
-                    0
-                ],
-                [
-                    25000000,
-                    0
-                ],
-                [
-                    30000000,
-                    0
-                ]
-            ]
-        },
-        "id": "tDSHUSD",
-        "symbol": "DASH/USD",
-        "base": "DASH",
-        "quote": "USD",
-        "baseId": "fDSH",
-        "quoteId": "fUSD",
-        "active": true,
-        "info": {
-            "pair": "dshusd",
-            "price_precision": "5",
-            "initial_margin": "30.0",
-            "minimum_margin": "15.0",
-            "maximum_order_size": "5000.0",
-            "minimum_order_size": "0.04",
+            "initial_margin": "10.0",
+            "minimum_margin": "5.0",
+            "maximum_order_size": "2000.0",
+            "minimum_order_size": "0.00006",
             "expiration": "NA",
             "margin": true
         },
@@ -555,6 +555,144 @@
         "limits": {
             "leverage": {},
             "amount": {
+                "min": 0.04,
+                "max": 5000
+            },
+            "price": {
+                "min": 1e-8
+            },
+            "cost": {}
+        },
+        "precision": {
+            "price": 5,
+            "amount": 8
+        },
+        "tierBased": true,
+        "percentage": true,
+        "taker": 0.002,
+        "maker": 0.001,
+        "feeSide": "get",
+        "tiers": {
+            "taker": [
+                [
+                    0,
+                    0.002
+                ],
+                [
+                    500000,
+                    0.002
+                ],
+                [
+                    1000000,
+                    0.002
+                ],
+                [
+                    2500000,
+                    0.002
+                ],
+                [
+                    5000000,
+                    0.002
+                ],
+                [
+                    7500000,
+                    0.002
+                ],
+                [
+                    10000000,
+                    0.0018
+                ],
+                [
+                    15000000,
+                    0.0016
+                ],
+                [
+                    20000000,
+                    0.0014
+                ],
+                [
+                    25000000,
+                    0.0012
+                ],
+                [
+                    30000000,
+                    0.001
+                ]
+            ],
+            "maker": [
+                [
+                    0,
+                    0.001
+                ],
+                [
+                    500000,
+                    0.0008
+                ],
+                [
+                    1000000,
+                    0.0006
+                ],
+                [
+                    2500000,
+                    0.0004
+                ],
+                [
+                    5000000,
+                    0.0002
+                ],
+                [
+                    7500000,
+                    0
+                ],
+                [
+                    10000000,
+                    0
+                ],
+                [
+                    15000000,
+                    0
+                ],
+                [
+                    20000000,
+                    0
+                ],
+                [
+                    25000000,
+                    0
+                ],
+                [
+                    30000000,
+                    0
+                ]
+            ]
+        },
+        "id": "tDSHUSD",
+        "symbol": "DASH/USD",
+        "base": "DASH",
+        "quote": "USD",
+        "baseId": "fDSH",
+        "quoteId": "fUSD",
+        "active": true,
+        "info": {
+            "pair": "dshusd",
+            "price_precision": "5",
+            "initial_margin": "30.0",
+            "minimum_margin": "15.0",
+            "maximum_order_size": "5000.0",
+            "minimum_order_size": "0.04",
+            "expiration": "NA",
+            "margin": true
+        },
+        "type": "spot",
+        "swap": false,
+        "spot": true,
+        "margin": true,
+        "future": false
+    },
+    {
+        "limits": {
+            "leverage": {},
+            "amount": {
                 "min": 2,
                 "max": 5000000
             },
@@ -680,6 +818,420 @@
             "minimum_margin": "5.0",
             "maximum_order_size": "5000000.0",
             "minimum_order_size": "2.0",
+            "expiration": "NA",
+            "margin": true
+        },
+        "type": "spot",
+        "swap": false,
+        "spot": true,
+        "margin": true,
+        "future": false
+    },
+    {
+        "limits": {
+            "leverage": {},
+            "amount": {
+                "min": 4,
+                "max": 250000
+            },
+            "price": {
+                "min": 1e-8
+            },
+            "cost": {}
+        },
+        "precision": {
+            "price": 5,
+            "amount": 8
+        },
+        "tierBased": true,
+        "percentage": true,
+        "taker": 0.002,
+        "maker": 0.001,
+        "feeSide": "get",
+        "tiers": {
+            "taker": [
+                [
+                    0,
+                    0.002
+                ],
+                [
+                    500000,
+                    0.002
+                ],
+                [
+                    1000000,
+                    0.002
+                ],
+                [
+                    2500000,
+                    0.002
+                ],
+                [
+                    5000000,
+                    0.002
+                ],
+                [
+                    7500000,
+                    0.002
+                ],
+                [
+                    10000000,
+                    0.0018
+                ],
+                [
+                    15000000,
+                    0.0016
+                ],
+                [
+                    20000000,
+                    0.0014
+                ],
+                [
+                    25000000,
+                    0.0012
+                ],
+                [
+                    30000000,
+                    0.001
+                ]
+            ],
+            "maker": [
+                [
+                    0,
+                    0.001
+                ],
+                [
+                    500000,
+                    0.0008
+                ],
+                [
+                    1000000,
+                    0.0006
+                ],
+                [
+                    2500000,
+                    0.0004
+                ],
+                [
+                    5000000,
+                    0.0002
+                ],
+                [
+                    7500000,
+                    0
+                ],
+                [
+                    10000000,
+                    0
+                ],
+                [
+                    15000000,
+                    0
+                ],
+                [
+                    20000000,
+                    0
+                ],
+                [
+                    25000000,
+                    0
+                ],
+                [
+                    30000000,
+                    0
+                ]
+            ]
+        },
+        "id": "tADAUSD",
+        "symbol": "ADA/USD",
+        "base": "ADA",
+        "quote": "USD",
+        "baseId": "fADA",
+        "quoteId": "fUSD",
+        "active": true,
+        "info": {
+            "pair": "adausd",
+            "price_precision": "5",
+            "initial_margin": "30.0",
+            "minimum_margin": "15.0",
+            "maximum_order_size": "250000.0",
+            "minimum_order_size": "4.0",
+            "expiration": "NA",
+            "margin": true
+        },
+        "type": "spot",
+        "swap": false,
+        "spot": true,
+        "margin": true,
+        "future": false
+    },
+    {
+        "limits": {
+            "leverage": {},
+            "amount": {
+                "min": 0.06,
+                "max": 50000
+            },
+            "price": {
+                "min": 1e-8
+            },
+            "cost": {}
+        },
+        "precision": {
+            "price": 5,
+            "amount": 8
+        },
+        "tierBased": true,
+        "percentage": true,
+        "taker": 0.002,
+        "maker": 0.001,
+        "feeSide": "get",
+        "tiers": {
+            "taker": [
+                [
+                    0,
+                    0.002
+                ],
+                [
+                    500000,
+                    0.002
+                ],
+                [
+                    1000000,
+                    0.002
+                ],
+                [
+                    2500000,
+                    0.002
+                ],
+                [
+                    5000000,
+                    0.002
+                ],
+                [
+                    7500000,
+                    0.002
+                ],
+                [
+                    10000000,
+                    0.0018
+                ],
+                [
+                    15000000,
+                    0.0016
+                ],
+                [
+                    20000000,
+                    0.0014
+                ],
+                [
+                    25000000,
+                    0.0012
+                ],
+                [
+                    30000000,
+                    0.001
+                ]
+            ],
+            "maker": [
+                [
+                    0,
+                    0.001
+                ],
+                [
+                    500000,
+                    0.0008
+                ],
+                [
+                    1000000,
+                    0.0006
+                ],
+                [
+                    2500000,
+                    0.0004
+                ],
+                [
+                    5000000,
+                    0.0002
+                ],
+                [
+                    7500000,
+                    0
+                ],
+                [
+                    10000000,
+                    0
+                ],
+                [
+                    15000000,
+                    0
+                ],
+                [
+                    20000000,
+                    0
+                ],
+                [
+                    25000000,
+                    0
+                ],
+                [
+                    30000000,
+                    0
+                ]
+            ]
+        },
+        "id": "tSOLUSD",
+        "symbol": "SOL/USD",
+        "base": "SOL",
+        "quote": "USD",
+        "baseId": "fSOL",
+        "quoteId": "fUSD",
+        "active": true,
+        "info": {
+            "pair": "solusd",
+            "price_precision": "5",
+            "initial_margin": "30.0",
+            "minimum_margin": "15.0",
+            "maximum_order_size": "50000.0",
+            "minimum_order_size": "0.06",
+            "expiration": "NA",
+            "margin": true
+        },
+        "type": "spot",
+        "swap": false,
+        "spot": true,
+        "margin": true,
+        "future": false
+    },
+    {
+        "limits": {
+            "leverage": {},
+            "amount": {
+                "min": 6,
+                "max": 100000
+            },
+            "price": {
+                "min": 1e-8
+            },
+            "cost": {}
+        },
+        "precision": {
+            "price": 5,
+            "amount": 8
+        },
+        "tierBased": true,
+        "percentage": true,
+        "taker": 0.002,
+        "maker": 0.001,
+        "feeSide": "get",
+        "tiers": {
+            "taker": [
+                [
+                    0,
+                    0.002
+                ],
+                [
+                    500000,
+                    0.002
+                ],
+                [
+                    1000000,
+                    0.002
+                ],
+                [
+                    2500000,
+                    0.002
+                ],
+                [
+                    5000000,
+                    0.002
+                ],
+                [
+                    7500000,
+                    0.002
+                ],
+                [
+                    10000000,
+                    0.0018
+                ],
+                [
+                    15000000,
+                    0.0016
+                ],
+                [
+                    20000000,
+                    0.0014
+                ],
+                [
+                    25000000,
+                    0.0012
+                ],
+                [
+                    30000000,
+                    0.001
+                ]
+            ],
+            "maker": [
+                [
+                    0,
+                    0.001
+                ],
+                [
+                    500000,
+                    0.0008
+                ],
+                [
+                    1000000,
+                    0.0006
+                ],
+                [
+                    2500000,
+                    0.0004
+                ],
+                [
+                    5000000,
+                    0.0002
+                ],
+                [
+                    7500000,
+                    0
+                ],
+                [
+                    10000000,
+                    0
+                ],
+                [
+                    15000000,
+                    0
+                ],
+                [
+                    20000000,
+                    0
+                ],
+                [
+                    25000000,
+                    0
+                ],
+                [
+                    30000000,
+                    0
+                ]
+            ]
+        },
+        "id": "tIOTUSD",
+        "symbol": "IOTA/USD",
+        "base": "IOTA",
+        "quote": "USD",
+        "baseId": "fIOT",
+        "quoteId": "fUSD",
+        "active": true,
+        "info": {
+            "pair": "iotusd",
+            "price_precision": "5",
+            "initial_margin": "30.0",
+            "minimum_margin": "15.0",
+            "maximum_order_size": "100000.0",
+            "minimum_order_size": "6.0",
             "expiration": "NA",
             "margin": true
         },

@@ -8,4 +8,5 @@ class Candle {
         this.volume = Number(data[5].toFixed(2))
     }
 }
-exports.Candle = Candle
+
+module.exports = { Candle }

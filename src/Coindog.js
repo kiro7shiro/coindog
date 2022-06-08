@@ -2,7 +2,7 @@ const EventEmitter = require('events')
 const fs = require('fs')
 const ccxt = require('ccxt')
 const Fuse = require('fuse.js')
-const { Candle } = require('./Candle.js')
+const { Candle, Candles } = require('./Candles.js')
 
 /**
  * Currently only supports bitfinex v2
@@ -27,6 +27,7 @@ class Coindog extends EventEmitter {
         this.sandbox = false
         this.balance = undefined
         this.markets = []
+        this.queue = []
         this.dataFile = dataFile
         this.handle = 0
         this.timer = {
@@ -74,7 +75,7 @@ class Coindog extends EventEmitter {
         return false
     }
     async search(symbol) {
-        if (!this.exchange.markets) await this.exchange.loadMarkets()
+        if (!this.initialized) await this.initialize()
         const symbols = Object.keys(this.exchange.markets)
         const fuse = new Fuse(symbols, { includeScore: true })
         const results = fuse.search(symbol)
@@ -82,12 +83,11 @@ class Coindog extends EventEmitter {
     }
     async save(symbol) {
         if (symbol) {
-            if (!this.exchange.markets) await this.exchange.loadMarkets()
+            if (!this.initialized) await this.initialize()
             if (!this.exchange.markets[symbol]) throw new Error(`${symbol} not found in markets`)
             const market = this.exchange.markets[symbol]
             if (this.markets.findIndex(m => m.symbol === market.symbol) < 0) {
                 this.markets.push(market)
-
             }
         }
         fs.writeFileSync(this.dataFile, JSON.stringify(this.markets, null, 4))
@@ -103,31 +103,31 @@ class Coindog extends EventEmitter {
 
                 if (!self.initialized) await self.initialize()
 
-                let last = 0
                 if (Date.now() > self.timer.last + self.timer.timeout) {
 
                     // fetch candles for each market
                     for (let mCnt = 0; mCnt < self.markets.length; mCnt++) {
+
                         const market = self.markets[mCnt]
-                        const [lastCandle] = market.candles ? market.candles.slice(-1) : []
-                        const since = lastCandle ? lastCandle.timestamp : Date.now() - Coindog.timespans['1h'] * 2
+                        if (!market.candles) market.candles = new Candles({ max: maxCandles })
+
+                        const lastCandle = market.candles.lastCandle
+                        const since = lastCandle ? lastCandle.timestamp : Date.now() - Coindog.timespans['1h']
                         self.emit('fetching', market.symbol)
-                        const fetched = (await self.exchange.fetchOHLCV(market.symbol, self.timeframes[0], since)).map(function (data) {
-                            return new Candle(data)
-                        }).filter(function (candle) {
-                            return candle.timestamp > since
-                        })
-                        market.candles = market.candles ? market.candles.concat(fetched) : fetched
-                        const slicer = market.candles.length >= maxCandles ? market.candles.length - maxCandles : 0
-                        market.candles = market.candles.slice(slicer)
+                        const fetched = await self.exchange.fetchOHLCV(market.symbol, self.timeframes[0], since)
+                        market.candles.add(fetched)
+
+                        market.since = new Date(since).toLocaleTimeString()
+                        market.last = new Date(market.candles.slice(-1)[0].timestamp).toLocaleTimeString()
+                        market.fetched = `${fetched.length}/${market.candles.length}`
+                        market.position = ''
+                        market.trend = ''
+                        market.signal = ''
+
                         self.emit('fetched', market)
-                        // wait before fetching new candles
-                        if (mCnt >= self.markets.length - 1) {
-                            last = market.candles.slice(-1)[0].timestamp
-                        }
                     }
 
-                    self.timer.last = last ? last : Date.now()
+                    self.timer.last = Date.now()
 
                 } else {
                     const remaining = self.timer.last + self.timer.timeout - Date.now()
@@ -150,6 +150,84 @@ class Coindog extends EventEmitter {
         })
 
     }
+
+    async watch2() {
+
+        const self = this
+
+        if (!self.initialized) await self.initialize()
+
+        self.running = true
+
+        const needToBeFetched = function (queue, market) {
+            if (!market.candles) market.candles = new Candles({ max: 60 })
+            if (!market.candles.lastCandle) {
+                queue.push(market)
+                return queue
+            }
+            if (market.candles.lastCandle.timestamp + self.timer.timeout < Date.now()) {
+                queue.push(market)
+                return queue
+            }
+            return queue
+        }
+
+        return new Promise(async function (resolve, reject) {
+
+            try {
+
+                const queue = self.queue
+
+                while (queue.length) {
+                    const market = queue.shift()
+                    const lastCandle = market.candles.lastCandle
+                    const since = lastCandle ? lastCandle.timestamp : Date.now() - Coindog.timespans['1h']
+                    self.emit('fetching', market.symbol)
+                    const fetched = await self.exchange.fetchOHLCV(market.symbol, self.timeframes[0], since)
+                    market.candles.add(fetched)
+                    // send data
+                    const eventData = {
+                        symbol: market.symbol,
+                        first: new Date(market.candles.firstCandle.timestamp).toLocaleTimeString(),
+                        last: new Date(market.candles.lastCandle.timestamp).toLocaleTimeString(),
+                        fetched: `${fetched.length}/${market.candles.length}`,
+                        position: '',
+                        trend: '',
+                        signal: '',
+                    }
+                    self.emit('fetched', eventData)
+                }
+
+                self.timer.last = Math.max(...self.markets.reduce(function (timestamps, market) {
+                    if (market.candles && market.candles.lastCandle) {
+                        timestamps.push(market.candles.lastCandle.timestamp)
+                    }
+                    return timestamps
+                }, [Date.now() - Coindog.timespans['1m']]))
+
+                queue.push(...self.markets.reduce(needToBeFetched, []))
+
+                if (!queue.length) {
+                    const remaining = self.timer.last + self.timer.timeout - Date.now()
+                    self.emit('pause', remaining)
+                }
+
+                if (self.running) {
+                    self.handle = setTimeout(async () => await self.watch2(), self.timer.rateLimit)
+                } else {
+                    resolve()
+                }
+
+            } catch (error) {
+
+                reject(error)
+
+            }
+
+        })
+
+    }
+
     stop() {
         this.running = false
         if (this.handle) {
