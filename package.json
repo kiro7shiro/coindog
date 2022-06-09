@@ -23,6 +23,7 @@
     "commander": "^9.0.0",
     "easy-table": "^1.2.0",
     "fuse.js": "^6.5.3",
+    "technicalindicators": "^3.1.0",
     "terminal-kit": "^2.4.0"
   }
 }

@@ -75,7 +75,6 @@ class Coindog extends EventEmitter {
         return false
     }
     async search(symbol) {
-        if (!this.initialized) await this.initialize()
         const symbols = Object.keys(this.exchange.markets)
         const fuse = new Fuse(symbols, { includeScore: true })
         const results = fuse.search(symbol)
@@ -83,7 +82,6 @@ class Coindog extends EventEmitter {
     }
     async save(symbol) {
         if (symbol) {
-            if (!this.initialized) await this.initialize()
             if (!this.exchange.markets[symbol]) throw new Error(`${symbol} not found in markets`)
             const market = this.exchange.markets[symbol]
             if (this.markets.findIndex(m => m.symbol === market.symbol) < 0) {
@@ -92,71 +90,10 @@ class Coindog extends EventEmitter {
         }
         fs.writeFileSync(this.dataFile, JSON.stringify(this.markets, null, 4))
     }
-    async watch({ maxCandles = 60 } = {}) {
+    
+    async watch() {
 
         const self = this
-        self.running = true
-
-        return new Promise(async function (resolve, reject) {
-
-            try {
-
-                if (!self.initialized) await self.initialize()
-
-                if (Date.now() > self.timer.last + self.timer.timeout) {
-
-                    // fetch candles for each market
-                    for (let mCnt = 0; mCnt < self.markets.length; mCnt++) {
-
-                        const market = self.markets[mCnt]
-                        if (!market.candles) market.candles = new Candles({ max: maxCandles })
-
-                        const lastCandle = market.candles.lastCandle
-                        const since = lastCandle ? lastCandle.timestamp : Date.now() - Coindog.timespans['1h']
-                        self.emit('fetching', market.symbol)
-                        const fetched = await self.exchange.fetchOHLCV(market.symbol, self.timeframes[0], since)
-                        market.candles.add(fetched)
-
-                        market.since = new Date(since).toLocaleTimeString()
-                        market.last = new Date(market.candles.slice(-1)[0].timestamp).toLocaleTimeString()
-                        market.fetched = `${fetched.length}/${market.candles.length}`
-                        market.position = ''
-                        market.trend = ''
-                        market.signal = ''
-
-                        self.emit('fetched', market)
-                    }
-
-                    self.timer.last = Date.now()
-
-                } else {
-                    const remaining = self.timer.last + self.timer.timeout - Date.now()
-                    self.emit('pause', remaining)
-                }
-
-                if (self.running) {
-                    self.handle = setTimeout(async () => await self.watch(), self.timer.rateLimit)
-                } else {
-                    resolve()
-                }
-
-
-            } catch (error) {
-
-                reject(error)
-
-            }
-
-        })
-
-    }
-
-    async watch2() {
-
-        const self = this
-
-        if (!self.initialized) await self.initialize()
-
         self.running = true
 
         const needToBeFetched = function (queue, market) {
@@ -185,7 +122,7 @@ class Coindog extends EventEmitter {
                     self.emit('fetching', market.symbol)
                     const fetched = await self.exchange.fetchOHLCV(market.symbol, self.timeframes[0], since)
                     market.candles.add(fetched)
-                    // send data
+                    // emit data
                     const eventData = {
                         symbol: market.symbol,
                         first: new Date(market.candles.firstCandle.timestamp).toLocaleTimeString(),
@@ -213,7 +150,7 @@ class Coindog extends EventEmitter {
                 }
 
                 if (self.running) {
-                    self.handle = setTimeout(async () => await self.watch2(), self.timer.rateLimit)
+                    self.handle = setTimeout(async () => await self.watch(), self.timer.rateLimit)
                 } else {
                     resolve()
                 }

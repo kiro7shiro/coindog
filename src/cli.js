@@ -5,10 +5,6 @@ const { Coindog } = require('../src/Coindog.js')
 const Table = require('easy-table')
 
 const watchdog = new Coindog(credentials.BITFINEX, '../data/symbols.json')
-async function init() {
-    await watchdog.initialize()
-}
-init()
 
 // *helper functions
 
@@ -51,19 +47,20 @@ function marketsToTable(markets) {
 // *cli methods
 
 async function cliInfo() {
-
+    if (!watchdog.initialized) await watchdog.initialize()
     terminal('getting status informaions... ')
     let spinner = await terminal.spinner()
     const status = await watchdog.exchange.fetchStatus()
     spinner.hidden = true
+    // print status info
     terminal('\n\n')
     terminal(statusToTable(status))
     terminal('\n')
-
+    // print markets info
     terminal('watching\n')
     terminal(marketsToTable(watchdog.markets))
     terminal('\n')
-
+    // print balance info
     terminal('loading balance... ')
     spinner = await terminal.spinner()
     const balance = await watchdog.loadBalance()
@@ -71,11 +68,10 @@ async function cliInfo() {
     terminal('\n\n')
     terminal(balanceToTable(balance))
     terminal('\n')
-
-    return
 }
 
 async function cliSearch(key) {
+    if (!watchdog.initialized) await watchdog.initialize()
     terminal(`searching '${key}'... `)
     const spinner = await terminal.spinner()
     const results = await watchdog.search(key)
@@ -92,12 +88,11 @@ async function cliSearch(key) {
     } else {
         terminal(`\nno markets found for: ${key}\n`)
     }
-    return
 }
 
 async function cliRemove(symbol) {
+    if (!watchdog.initialized) await watchdog.initialize()
     if (!symbol) {
-        if (!watchdog.initialized) await watchdog.initialize()
         const items = watchdog.markets.reduce(function (prev, curr) {
             prev.push(curr.symbol)
             return prev
@@ -110,7 +105,6 @@ async function cliRemove(symbol) {
     if (result) {
         terminal(`\n${result} removed...\n`)
     }
-    return
 }
 
 async function cliWatch(markets) {
@@ -188,21 +182,27 @@ async function cliWatch(markets) {
         // init text
         if (!marketsText.length) {
             marketsData = watchdog.markets.reduce(function (accu, curr) {
-                accu.push({ symbol: curr.symbol })
+                accu.push({
+                    symbol: curr.symbol,
+                    first: '',
+                    last: '',
+                    fetched: '',
+                    position: '',
+                    trend: '',
+                    signal: '',
+                })
                 return accu
             }, [])
-            marketsText = Table.print(marketsData)
         }
 
         // update market text
         if (info) {
-            const newData = info /* filterObject(info, ['symbol', 'first', 'last', 'fetched', 'position', 'trend', 'signal']) */
             let mIdx = marketsData.findIndex(m => m.symbol === info.symbol)
             if (mIdx < 0) {
-                marketsData.push(newData)
+                marketsData.push(info)
                 mIdx = marketsData.length - 1
             } else {
-                marketsData[mIdx] = Object.assign(marketsData[mIdx], newData)
+                marketsData[mIdx] = Object.assign(marketsData[mIdx], info)
             }
             // highlight updated row
             const table = Table.print(marketsData).split('\n').map((line, index) => {
@@ -238,11 +238,6 @@ async function cliWatch(markets) {
         balanceBox.setContent(balanceText)
     }
 
-    const draw = function () {
-        drawMarkets()
-        drawBalance()
-    }
-
     resize()
 
     watchdog.on('initializing', function () {
@@ -252,7 +247,8 @@ async function cliWatch(markets) {
         messageBox.setContent('')
         updateMarkets()
         updateBalance(watchdog.balance)
-        draw()
+        drawMarkets()
+        drawBalance()
     })
     watchdog.on('fetching', function (symbol) {
         messageBox.setContent(`fetching ${symbol} ...`)
@@ -266,14 +262,14 @@ async function cliWatch(markets) {
         messageBox.setContent(`pause - remaining time ${(remaining / 1000).toFixed(0)} ...`)
     })
 
-    await watchdog.watch2()
+    if (!watchdog.initialized) await watchdog.initialize()
+    await watchdog.watch()
 
 }
 
 // *terminal events
 
 function terminate() {
-    //terminal.eraseDisplayBelow()
     terminal.moveTo(1, terminal.height - 1)
     terminal.grabInput(false)
     terminal.hideCursor(false)
