@@ -33,6 +33,16 @@ class Signals {
         return
     }
 
+    static candleRate = function (market) {
+        if (market.candles.length) {
+            const firstCandle = market.candles.firstCandle
+            const lastCandle = market.candles.lastCandle
+            const time = (lastCandle.timestamp - firstCandle.timestamp) / 60000
+            return market.candles.length / time
+        }
+        return 0
+    }
+
 }
 
 module.exports = Signals

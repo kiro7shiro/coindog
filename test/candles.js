@@ -4,7 +4,7 @@ const { Candle, Candles } = require('../src/Candles.js')
 describe('candles', function () {
 
     it('initialize', function () {
-        
+
         const test = []
 
         for (let cCnt = 0; cCnt < 4; cCnt++) {
@@ -13,12 +13,13 @@ describe('candles', function () {
         }
 
         const candles = new Candles({ candles: test, max: 3 })
- 
+
         console.log({ candles })
         console.log({
             first: candles.firstCandle,
             last: candles.lastCandle
         })
+        console.log({ json: JSON.stringify(candles) })
 
     })
 
