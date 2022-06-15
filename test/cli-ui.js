@@ -26,18 +26,18 @@ function test() {
     ]
     const testStyle1 = new TableStyle({
         row: 2,
-        cell: 0,
+        cell: 1,
         color: TableColors.red,
         bgColor: TableColors.bgBrightYellow
     })
     const testStyle2 = new TableStyle({
         row: 3,
-        cell: 1,
+        cell: 0,
         color: TableColors.black,
         bgColor: TableColors.bgBrightCyan
     })
     const testStyle3 = new TableStyle({
-        row: 2,
+        row: 3,
         color: TableColors.black,
         bgColor: TableColors.bgWhite
     })
@@ -51,9 +51,9 @@ function test() {
         height: 10,
     }, { data: testData })
     marketsTable.update([{ symbol: 3, value: 2 }, { symbol: 'xyz', value: 4 }, { symbol: 4, value: 5 }])
-    marketsTable.applyStyle(testStyle1)
-    marketsTable.applyStyle(testStyle2)
     marketsTable.applyStyle(testStyle3)
+    marketsTable.applyStyle(testStyle2)
+    marketsTable.applyStyle(testStyle1)
     marketsTable.drawStyles()
 
 }

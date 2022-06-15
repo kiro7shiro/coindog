@@ -89,6 +89,11 @@ class MarketsTable extends termkit.TextBox {
                     if (!style.cell || style.cell === -1) lineStyles.push(style)
                     return lineStyles
                 }, [])
+                const cellStyles = styles.reduce(function (cellStyles, style) {
+                    if (style.cell > -1) cellStyles.push(style)
+                    return cellStyles
+                }, [])
+
                 if (lineStyles.length) {
                     for (let lCnt = 0; lCnt < lineStyles.length; lCnt++) {
                         const { color, bgColor } = lineStyles[lCnt]
@@ -97,16 +102,27 @@ class MarketsTable extends termkit.TextBox {
                 }
                 const cells = line.split(/\s+/).filter(c => !!c)
                 const spaces = line.split(/\S+/).filter(s => !!s)
-                terminal.moveTo(1, terminal.height - 10)
+                /* terminal.moveTo(1, terminal.height - 10)
                 terminal.eraseDisplayBelow()
                 terminal.styleReset()
-                console.log({ cells, spaces })
+                console.log({ cells, spaces }) */
                 for (let cCnt = 0; cCnt < cells.length; cCnt++) {
                     const cell = cells[cCnt]
-                    const style = styles.find(s => s.cell === cCnt)
+                    const space = spaces[cCnt]
+                    const style = cellStyles.find(s => s.cell === cCnt)
+                    
                     if (style) {
                         const { color, bgColor } = style
                         cells[cCnt] = terminal[color][bgColor].str(cell)
+                        
+                        if (lineStyles.length) {
+                            for (let lCnt = 0; lCnt < lineStyles.length; lCnt++) {
+                                spaces[cCnt] = terminal[lineStyles[lCnt].color][lineStyles[lCnt].bgColor].str(space)
+                            }       
+                        }else{
+                            spaces[cCnt] = terminal[color][bgColor].str(space)
+                        }
+                        
                     }
                 }
                 const applied = cells.reduce(function (text, cell, index) {
