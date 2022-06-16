@@ -26,17 +26,7 @@ class Candles extends Array {
         return frame
     }
     get rate() {
-        let rate = 0
-        let time = 0
-        if (this.length) {
-            const first = this.firstCandle
-            const last = this.lastCandle
-            const frame = this.timeframe
-            time = last.timestamp - first.timestamp
-            //rate = (1 - frame / time) * 100
-            rate = frame / this.length
-        }
-        return rate
+        return this.length / this.max
     }
     add(data) {
         let newCandles = data

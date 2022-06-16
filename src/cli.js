@@ -1,8 +1,11 @@
+const _object = require('lodash/object')
 const termkit = require('../node_modules/terminal-kit/lib/termkit.js')
 const terminal = termkit.terminal
+const Table = require('easy-table')
+const { TableColors, TableStyle, MarketsTable } = require('./cli-ui/MarketsTable.js')
 const credentials = require('../credentials/credentials.js')
 const { Coindog } = require('../src/Coindog.js')
-const Table = require('easy-table')
+
 
 const watchdog = new Coindog(credentials.BITFINEX, '../data/symbols.json')
 
@@ -132,13 +135,25 @@ async function cliWatch(markets) {
         attr: { bgColor: 'default' }
     })
 
-    const marketsBox = new termkit.TextBox({
+    const marketsTable = new MarketsTable({
         parent: document,
         content: '',
         contentHasMarkup: 'legacyAnsi',
         x: 0,
         y: 0,
         attr: { bgColor: 'default' }
+    }, {
+        headers: [
+            'symbol',
+            'first',
+            'last',
+            'fetched',
+            'rpm',
+            'rate',
+            'position',
+            'trend',
+            'signal'
+        ]
     })
 
     const balanceBox = new termkit.TextBox({
@@ -161,118 +176,15 @@ async function cliWatch(markets) {
 
     // *ui update functions
     let timerText = ''
-    let lastRpm = 0
-    let upDown = ''
     const updateTimer = function (info) {
-        if (lastRpm < info.rpm) {
+        /* if (lastRpm < info.rpm) {
             upDown = '▲'
         } else if (lastRpm === info.rpm) {
             upDown = upDown
         } else {
             upDown = '▼'
-        }
-        timerText = `requests per minute: ${(info.rpm).toFixed(2)} ${upDown} timeout: ${(info.timeout).toFixed(2)}ms`
-        lastRpm = info.rpm
-    }
-
-    let marketsData = []
-    let marketsText = ''
-    let highlights = []
-
-    const colors = {
-        'defaultColor': 'defaultColor',
-        'black': 'black',
-        'red': 'red',
-        'green': 'green',
-        'yellow': 'yellow',
-        'blue': 'blue',
-        'magenta': 'magenta',
-        'cyan': 'cyan',
-        'white': 'white',
-        'gray': 'gray',
-        'brightRed': 'brightRed',
-        'brightGreen': 'brightGreen',
-        'brightYellow': 'brightYellow',
-        'brightBlue': 'brightBlue',
-        'brightMagenta': 'brightMagenta',
-        'brightCyan': 'brightCyan',
-        'brightWhite': 'brightWhite',
-        'bgDefaultColor': 'bgDefaultColor',
-        'bgBlack': 'bgBlack',
-        'bgRed': 'bgRed',
-        'bgGreen': 'bgGreen',
-        'bgYellow': 'bgYellow',
-        'bgBlue': 'bgBlue',
-        'bgMagenta': 'bgMagenta',
-        'bgCyan': 'bgCyan',
-        'bgWhite': 'bgWhite',
-        'bgDarkColor': 'bgDarkColor',
-        'bgGray': 'bgGray',
-        'bgBrightRed': 'bgBrightRed',
-        'bgBrightGreen': 'bgBrightGreen',
-        'bgBrightYellow': 'bgBrightYellow',
-        'bgBrightBlue': 'bgBrightBlue',
-        'bgBrightMagenta': 'bgBrightMagenta',
-        'bgBrightCyan': 'bgBrightCyan'
-    }
-
-    const selectedRow = {
-        index: -1,
-        color: colors['defaultColor'],
-        bgColor: colors['bgBrightGreen']
-    }
-    const updatedRow = {
-        index: -1,
-        color: colors['brightGreen'],
-        bgColor: colors['bgDefaultColor']
-    }
-
-    highlights = [selectedRow, updatedRow]
-
-    const highlightTableLines = function (tableData, highlights) {
-        return Table.print(tableData).split('\n').map((line, index) => {
-            const highlight = highlights.find(highlight => highlight.index === index)
-            if (highlight) {
-                return terminal[highlight.color][highlight.bgColor].str(line)
-            } else {
-                return terminal.defaultColor.bgDefaultColor.str(line)
-            }
-        }).join('\n')
-    }
-
-    const updateMarkets = function (info, { highlight = false } = {}) {
-
-        // init text
-        if (!marketsText.length) {
-            marketsData = watchdog.markets.reduce(function (accu, curr) {
-                accu.push({
-                    symbol: curr.symbol,
-                    first: '',
-                    last: '',
-                    fetched: '',
-                    rate: '',
-                    frame: '',
-                    position: '',
-                    trend: '',
-                    signal: ''
-                })
-                return accu
-            }, [])
-        }
-
-        // update market text
-        if (info) {
-            let mIdx = marketsData.findIndex(m => m.symbol === info.symbol)
-            if (mIdx < 0) {
-                marketsData.push(info)
-                mIdx = marketsData.length - 1
-            } else {
-                marketsData[mIdx] = Object.assign(marketsData[mIdx], info)
-            }
-            if (highlight) updatedRow.index = mIdx + 2
-
-        }
-        marketsText = highlightTableLines(marketsData, highlights)
+        } */
+        timerText = `timeout: ${(info.timeout).toFixed(2)}ms fps: ${info.fps.toFixed(2)}`
     }
 
     let balanceText = ''
@@ -284,7 +196,7 @@ async function cliWatch(markets) {
     // *ui draw functions
     const resize = function () {
         const { width, height } = terminal
-        const marketsWidth = marketsText.split('\n')[0].length || 0
+        const marketsWidth = marketsTable.text.split('\n')[0].length || 0
         const balanceHeight = balanceText.split('\n').length || 0
         timerBox.setSizeAndPosition({
             x: 1,
@@ -292,7 +204,7 @@ async function cliWatch(markets) {
             height: 1,
             width: timerText.length
         })
-        marketsBox.setSizeAndPosition({
+        marketsTable.setSizeAndPosition({
             x: 1,
             y: timerBox.outputY + 2,
             height: height / 2,
@@ -316,10 +228,6 @@ async function cliWatch(markets) {
         timerBox.setContent(timerText, 'legacyAnsi')
     }
 
-    const drawMarkets = function () {
-        marketsBox.setContent(marketsText, 'legacyAnsi')
-    }
-
     const drawBalance = function () {
         balanceBox.setContent(balanceText)
     }
@@ -330,25 +238,33 @@ async function cliWatch(markets) {
     })
     watchdog.on('initialized', function () {
         messageBox.setContent('')
-        updateMarkets()
         updateBalance(watchdog.balance)
         resize()
-        drawMarkets()
         drawBalance()
     })
     watchdog.on('fetching', function (symbol) {
         messageBox.setContent(`fetching ${symbol} ...`)
     })
+
+    const highlight = new TableStyle({
+        row: 0,
+        color: TableColors.black,
+        bgColor: TableColors.bgWhite
+    })
     watchdog.on('fetched', function (info) {
         messageBox.setContent(`fetching ${info.symbol} ...done`)
-        updateMarkets(info, { highlight: true })
+        marketsTable.removeStyle(highlight)
+        marketsTable.update([info])
+        highlight.row = marketsTable.data.findIndex(m => m.symbol === info.symbol) + 2
+        marketsTable.applyStyle(highlight)
         resize()
-        drawMarkets()
+        marketsTable.drawStyles()
     })
+
     watchdog.on('analyzed', function (info) {
-        updateMarkets(info)
+        marketsTable.update([info])
         resize()
-        drawMarkets()
+        marketsTable.drawStyles()
     })
     watchdog.on('pause', function (info) {
         updateTimer(info)
@@ -377,7 +293,7 @@ async function cliWatch(markets) {
     resize()
     if (!watchdog.initialized) await watchdog.initialize()
     // run tasks in parallel
-    await Promise.all([watchdog.watch2(), watchdog.analyze()])
+    await Promise.all([watchdog.watch(), watchdog.analyze()])
 
 }
 

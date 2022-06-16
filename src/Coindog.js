@@ -32,24 +32,19 @@ class Coindog extends EventEmitter {
         this.markets = []
         this.queue = []
         this.dataPath = dataPath
-        this.handle = 0
         this.timer = {
-            last: 0,
-            timespan: Coindog.timespans['1m'],
-            timeout: Coindog.timespans['1s'],
-            rateLimit: Coindog.timespans['1m'] / 90
-        }
-        this.counter = {
-            last: 0,
-            request: 0,
-            rpm: 0,
-            timeout: Coindog.timespans['1s']
-        }
-        this.timer2 = {
+            fps: 0,
+            frames: 0,
             handle: 0,
+            handles: {
+                analyze: 0,
+                watch: 0
+            },
             last: 0,
+            timeout: 1000 / 60,
+        }
+        this.limiter = {
             timespan: Coindog.timespans['1s'],
-            timeout: Coindog.timespans['1s'] / 60,
             rateLimit: Coindog.timespans['1m'] / 90
         }
         this.timeframes = undefined
@@ -60,6 +55,8 @@ class Coindog extends EventEmitter {
     async analyze() {
 
         const self = this
+        const timer = self.timer
+        const now = Date.now()
 
         return new Promise(function (resolve, reject) {
 
@@ -74,13 +71,19 @@ class Coindog extends EventEmitter {
                     position: self.inPosition(market),
                     trend: lastCandle?.uptrend || false,
                     signal: lastCandle?.signal || 'WAIT',
-                    rate: market.candles.rate.toFixed(2),
-                    frame: market.candles.timeframe.toFixed(2)
+                    rate: market.candles.rate.toFixed(2)
                 }
                 self.emit('analyzed', eventData)
             }
 
-            let handle = setTimeout(async () => await self.analyze(), Coindog.timespans['1s'])
+            timer.frames++
+            if (timer.last + 1000 <= now) {
+                timer.fps = timer.fps * 0.75 + timer.frames * 0.25
+                timer.frames = 0
+                timer.last = now
+            }
+
+            timer.handles.analyze = setTimeout(async () => await self.analyze(), timer.timeout)
 
         })
 
@@ -169,18 +172,29 @@ class Coindog extends EventEmitter {
         fs.writeFileSync(file, JSON.stringify(candles, null, 4))
     }
 
-    async watch({ maxCandles = 60 } = {}) {
+    async watch({ timespan = 60, timeframe = 1 } = {}) {
 
         const self = this
-        self.running = true
+        const timer = self.timer
+        const now = Date.now()
+        const maxCandles = timespan / timeframe
+        const fetchTimeout = 60000 * timeframe
 
         const needToBeFetched = function (queue, market) {
+            if (queue.findIndex(m => m.symbol === market.symbol) > -1) return queue
             if (!market.candles) market.candles = new Candles({ max: maxCandles })
+            if (!market.counter) market.counter = {
+                last: 0,
+                limit: Coindog.timespans['1m'] / 90,
+                requests: 0,
+                rpm: 0,
+                timeout: 1000
+            }
             if (!market.candles.lastCandle) {
                 queue.push(market)
                 return queue
             }
-            if (market.candles.lastCandle.timestamp + self.timer.timespan < Date.now()) {
+            if (market.candles.lastCandle.timestamp + fetchTimeout < now) {
                 queue.push(market)
                 return queue
             }
@@ -189,14 +203,14 @@ class Coindog extends EventEmitter {
 
         return new Promise(async function (resolve, reject) {
 
-            try {
+            let queue = self.queue
+            queue = self.markets.reduce(needToBeFetched, queue)
 
-                const now = Date.now()
+            if (queue.length) {
+                const market = queue.shift()
+                const counter = market.counter
 
-                // fetch candles for each market
-                const queue = self.queue
-                while (queue.length) {
-                    const market = queue.shift()
+                if (counter.rpm * counter.limit <= counter.limit) {
                     let lastCandle = market.candles.lastCandle
                     const since = lastCandle ? lastCandle.timestamp : now - Coindog.timespans['1h']
                     self.emit('fetching', market.symbol)
@@ -211,131 +225,45 @@ class Coindog extends EventEmitter {
                         symbol: market.symbol,
                         first: new Date(firstCandle.timestamp).toLocaleTimeString(),
                         last: new Date(lastCandle.timestamp).toLocaleTimeString(),
-                        fetched: `${fetched.length}/${market.candles.length}`
+                        fetched: `${fetched.length}/${market.candles.length}`,
+                        rpm: (counter.rpm * 90).toFixed(2)
                     }
                     self.emit('fetched', eventData)
+                    counter.requests++
                 }
 
-                // set pause timer
-                self.timer.last = Math.max(...self.markets.reduce(function (timestamps, market) {
-                    if (market.candles && market.candles.lastCandle) {
-                        timestamps.push(market.candles.lastCandle.timestamp)
-                    }
-                    return timestamps
-                }, [now - Coindog.timespans['1m']]))
-
-                // prepare queue for next iteration
-                queue.push(...self.markets.reduce(needToBeFetched, []))
-
-                // calc new timeout
-                self.timer.timeout = self.timer.rateLimit / ((90 / queue.length) || 1)
-
-                self.counter.request += queue.length
-                if (self.counter.last + self.counter.timeout <= now) {
-                    self.counter.rpm = self.counter.rpm * 0.5 + self.counter.request * 0.5
-                    self.counter.request = 0
-                    self.counter.last = now
+                if (counter.last + counter.timeout <= now) {
+                    counter.rpm = counter.rpm * 0.75 + counter.requests * 0.25
+                    counter.requests = 0
+                    counter.last = now
                 }
-
-                const remaining = self.timer.timespan - (now - self.timer.last)
-                const eventData = {
-                    remaining,
-                    rpm: self.counter.rpm,
-                    queue: queue.length,
-                    timeout: self.timer.timeout
-                }
-                self.emit('pause', eventData)
-
-                // resolve promise if stopped
-                if (self.running) {
-                    self.handle = setTimeout(async () => await self.watch(), self.timer.timeout)
-                } else {
-                    resolve()
-                }
-
-            } catch (error) {
-
-                reject(error)
 
             }
 
-        })
-
-    }
-
-    async watch2({ maxCandles = 60 } = {}) {
-        const self = this
-        const timer2 = self.timer2
-        const now = Date.now()
-
-        const needToBeFetched = function (queue, market) {
-            if (queue.findIndex(m => m.symbol === market.symbol) > -1) return queue
-            if (!market.candles) market.candles = new Candles({ max: maxCandles })
-            if (!market.candles.lastCandle) {
-                queue.push(market)
-                return queue
-            }
-            if ((market.candles.lastCandle.timestamp + Coindog.timespans['1m']) < now) {
-                queue.push(market)
-                return queue
-            }
-            return queue
-        }
-
-        return new Promise(async function (resolve, reject) {
-
-            let queue = self.queue
-            const counter = self.counter
-
-            queue = self.markets.reduce(needToBeFetched, queue)
-
-            if (queue.length) {
-                const market = queue.shift()
-                let lastCandle = market.candles.lastCandle
-                const since = lastCandle ? lastCandle.timestamp : now - Coindog.timespans['1h']
-                self.emit('fetching', market.symbol)
-                const fetched = await self.exchange.fetchOHLCV(market.symbol, self.timeframes[0], since)
-                market.candles.add(fetched)
-                // emit data
-                let firstCandle = market.candles.firstCandle
-                lastCandle = market.candles.lastCandle
-                if (!firstCandle) firstCandle = { timestamp: 0 }
-                if (!lastCandle) lastCandle = { timestamp: 0 }
-                const eventData = {
-                    symbol: market.symbol,
-                    first: new Date(firstCandle.timestamp).toLocaleTimeString(),
-                    last: new Date(lastCandle.timestamp).toLocaleTimeString(),
-                    fetched: `${fetched.length}/${market.candles.length}`
-                }
-                self.emit('fetched', eventData)
-                counter.request++
-                timer2.last = now
-            }
-            
-            if (counter.last + counter.timeout <= now) {
-                counter.rpm = counter.rpm * 0.75 + counter.request * 0.25
-                counter.request = 0
-                counter.last = now
+            timer.frames++
+            if (timer.last + 1000 <= now) {
+                timer.fps = timer.fps * 0.75 + timer.frames * 0.25
+                timer.frames = 0
+                timer.last = now
             }
 
             const eventData = {
-                remaining: 0,
-                rpm: counter.rpm * 60,
-                queue: queue.length,
-                timeout: timer2.timeout
+                timeout: timer.timeout,
+                fps: timer.fps
             }
             self.emit('pause', eventData)
 
-            timer2.handle = setTimeout(async () => await self.watch2(), timer2.timeout)
+            timer.handles.watch = setTimeout(async () => await self.watch(), timer.timeout)
 
         })
     }
 
     stop() {
-        this.running = false
-        if (this.handle) {
-            clearTimeout(this.handle)
-            this.handle = 0
+        const timer = this.timer
+        timer.running = false
+        if (timer.handle) {
+            clearTimeout(timer.handle)
+            timer.handle = 0
         }
     }
 }

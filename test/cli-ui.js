@@ -1,6 +1,6 @@
 const termkit = require('../node_modules/terminal-kit/lib/termkit.js')
 const terminal = termkit.terminal
-const { TableColors, TableStyle, MarketsTable } = require('../src/cli-ui/MarketsBox.js')
+const { TableColors, TableStyle, MarketsTable } = require('../src/cli-ui/MarketsTable.js')
 
 
 function terminate() {
@@ -54,7 +54,9 @@ function test() {
     marketsTable.applyStyle(testStyle3)
     marketsTable.applyStyle(testStyle2)
     marketsTable.applyStyle(testStyle1)
-    marketsTable.drawStyles()
+    //marketsTable.drawStyles()
+
+    terminate()
 
 }
 
