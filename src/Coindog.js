@@ -84,6 +84,7 @@ class Coindog extends EventEmitter {
             }
 
             timer.handles.analyze = setTimeout(async () => await self.analyze(), timer.timeout)
+            //setImmediate(async () => await self.analyze())
 
         })
 
@@ -253,7 +254,8 @@ class Coindog extends EventEmitter {
             }
             self.emit('pause', eventData)
 
-            timer.handles.watch = setTimeout(async () => await self.watch(), timer.timeout)
+            //timer.handles.watch = setTimeout(async () => await self.watch(), timer.timeout)
+            setImmediate(async () => await self.watch())
 
         })
     }

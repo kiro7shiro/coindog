@@ -258,7 +258,7 @@ async function cliWatch(markets) {
         highlight.row = marketsTable.data.findIndex(m => m.symbol === info.symbol) + 2
         marketsTable.applyStyle(highlight)
         resize()
-        marketsTable.drawStyles()
+        //marketsTable.drawStyles()
     })
 
     watchdog.on('analyzed', function (info) {
@@ -272,16 +272,27 @@ async function cliWatch(markets) {
         drawTimer()
     })
 
+    const selected = new TableStyle({
+        row: -1,
+        color: TableColors.black,
+        bgColor: TableColors.bgBrightGreen
+    })
     terminal.on('key', function (name, matches, data) {
         switch (name) {
             case 'UP':
-                selectedRow.index--
-                if (selectedRow.index < 2) selectedRow.index = watchdog.markets.length - 1 + 2
+                marketsTable.removeStyle(selected)
+                selected.row--
+                if (selected.row < 2) selected.row = watchdog.markets.length - 1 + 2
+                marketsTable.applyStyle(selected)
+                marketsTable.drawStyles()
                 break
             case 'DOWN':
-                selectedRow.index++
-                if (selectedRow.index >= watchdog.markets.length + 2) selectedRow.index = 2
-                if (selectedRow.index < 2) selectedRow.index = 2
+                marketsTable.removeStyle(selected)
+                selected.row++
+                if (selected.row >= watchdog.markets.length + 2) selected.row = 2
+                if (selected.row < 2) selected.row = 2
+                marketsTable.applyStyle(selected)
+                marketsTable.drawStyles()
                 break
             default:
                 messageBox.setContent(`key ${name} ...`)
