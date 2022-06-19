@@ -51,11 +51,12 @@ class TableStyle {
         return style.row > -1 && (typeof style.cell === 'undefined' || style.cell < 0)
     }
 
-    constructor({ row, cell, color, bgColor } = {}) {
+    constructor({ row, cell, color, bgColor, formatter } = {}) {
         this.row = row
         this.cell = cell
         this.color = color
         this.bgColor = bgColor
+        this.formatter = formatter
     }
 
     isEqual(style) {
@@ -98,7 +99,7 @@ class MarketsTable extends termkit.TextBox {
                 this.lineStyles.push(style)
             }
         } else {
-            const csIdx = this.cellStyles.findIndex(s => s.isEqual(style))
+            const csIdx = this.cellStyles.findIndex(s => s.cell === style.cell && s.row === style.row)
             if (csIdx > -1) {
                 this.cellStyles[csIdx] = style
             } else {

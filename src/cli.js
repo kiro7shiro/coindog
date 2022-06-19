@@ -1,6 +1,7 @@
 const _object = require('lodash/object')
 const termkit = require('../node_modules/terminal-kit/lib/termkit.js')
 const terminal = termkit.terminal
+const asciichart = require('asciichart')
 const Table = require('easy-table')
 const { TableColors, TableStyle, MarketsTable } = require('./cli-ui/MarketsTable.js')
 const credentials = require('../credentials/credentials.js')
@@ -156,6 +157,15 @@ async function cliWatch(markets) {
         ]
     })
 
+    const chartBox = new termkit.TextBox({
+        parent: document,
+        content: '',
+        contentHasMarkup: 'legacyAnsi',
+        x: 0,
+        y: 0,
+        attr: { bgColor: 'default' }
+    })
+
     const balanceBox = new termkit.TextBox({
         parent: document,
         content: '',
@@ -175,40 +185,27 @@ async function cliWatch(markets) {
     })
 
     // *ui update functions
-    let timerText = ''
-    const updateTimer = function (info) {
-        /* if (lastRpm < info.rpm) {
-            upDown = '▲'
-        } else if (lastRpm === info.rpm) {
-            upDown = upDown
-        } else {
-            upDown = '▼'
-        } */
-        timerText = `timeout: ${(info.timeout).toFixed(2)}ms fps: ${info.fps.toFixed(2)}`
-    }
-
-    let balanceText = ''
-
-    const updateBalance = function (balance) {
-        balanceText = balanceToTable(balance)
-    }
-
-    // *ui draw functions
     const resize = function () {
         const { width, height } = terminal
         const marketsWidth = marketsTable.text.split('\n')[0].length || 0
-        const balanceHeight = balanceText.split('\n').length || 0
+        const balanceHeight = balanceBox.getContent().split('\n').length || 0
         timerBox.setSizeAndPosition({
             x: 1,
             y: title.outputY + 2,
             height: 1,
-            width: timerText.length
+            width: timerBox.getContent().length
         })
         marketsTable.setSizeAndPosition({
             x: 1,
             y: timerBox.outputY + 2,
             height: height / 2,
             width: marketsWidth
+        })
+        chartBox.setSizeAndPosition({
+            x: marketsTable.outputWidth + 4,
+            y: timerBox.outputY + 2,
+            height: height / 2,
+            width: chartBox.getContent().split('\n')[0].length
         })
         balanceBox.setSizeAndPosition({
             x: 1,
@@ -224,24 +221,18 @@ async function cliWatch(markets) {
         })
     }
 
-    const drawTimer = function () {
-        timerBox.setContent(timerText, 'legacyAnsi')
-    }
-
-    const drawBalance = function () {
-        balanceBox.setContent(balanceText)
-    }
-
     // *events
     watchdog.on('initializing', function () {
-        messageBox.setContent('loading...')
+        messageBox.setContent('loading ...')
     })
+
     watchdog.on('initialized', function () {
         messageBox.setContent('')
-        updateBalance(watchdog.balance)
+        let balanceText = balanceToTable(watchdog.balance)
+        balanceBox.setContent(balanceText)
         resize()
-        drawBalance()
     })
+
     watchdog.on('fetching', function (symbol) {
         messageBox.setContent(`fetching ${symbol} ...`)
     })
@@ -253,23 +244,56 @@ async function cliWatch(markets) {
     })
     watchdog.on('fetched', function (info) {
         messageBox.setContent(`fetching ${info.symbol} ...done`)
-        marketsTable.removeStyle(highlight)
         marketsTable.update([info])
         highlight.row = marketsTable.data.findIndex(m => m.symbol === info.symbol) + 2
         marketsTable.applyStyle(highlight)
         resize()
-        //marketsTable.drawStyles()
     })
 
     watchdog.on('analyzed', function (info) {
         marketsTable.update([info])
+        const row = marketsTable.data.findIndex(m => m.symbol === info.symbol) + 2
+        if (info.position === 'true') {
+            marketsTable.applyStyle(new TableStyle({
+                row,
+                cell: 6,
+                color: TableColors.green,
+                bgColor: TableColors.bgDefaultColor
+            }))
+        } else {
+            marketsTable.applyStyle(new TableStyle({
+                row,
+                cell: 6,
+                color: TableColors.red,
+                bgColor: TableColors.bgDefaultColor
+            }))
+        }
+        if (info.trend) {
+            marketsTable.applyStyle(new TableStyle({
+                row,
+                cell: 7,
+                color: TableColors.green,
+                bgColor: TableColors.bgDefaultColor
+            }))
+        } else {
+            marketsTable.applyStyle(new TableStyle({
+                row,
+                cell: 7,
+                color: TableColors.red,
+                bgColor: TableColors.bgDefaultColor
+            }))
+        }
         resize()
-        marketsTable.drawStyles()
     })
+
     watchdog.on('pause', function (info) {
-        updateTimer(info)
+        if (!info.queue) {
+            marketsTable.removeStyle(highlight)
+            messageBox.setContent(`all markets up to date ...!`)
+        }
+        let timerText = `timeout: ${(info.timeout).toFixed(2)}ms fps: ${info.fps.toFixed(2)}`
+        timerBox.setContent(timerText)
         resize()
-        drawTimer()
     })
 
     const selected = new TableStyle({
@@ -277,14 +301,54 @@ async function cliWatch(markets) {
         color: TableColors.black,
         bgColor: TableColors.bgBrightGreen
     })
+
+    function drawChart(market) {
+        let candles = market.candles.reduce(function (prev, curr) {
+            prev.push(curr.close)
+            return prev
+        }, [])
+        let upperBand = market.candles.reduce(function (prev, curr) {
+            if (curr.uptrend === false && curr.upperBand) {
+                prev.push(curr.upperBand)
+            } else {
+                prev.push(curr.close)
+            }
+            return prev
+        }, [])
+        let lowerBand = market.candles.reduce(function (prev, curr) {
+            if (curr.uptrend === true && curr.lowerBand) {
+                prev.push(curr.lowerBand)
+            } else {
+                prev.push(curr.close)
+            }
+            return prev
+        }, [])
+        const { precision } = market
+        let chartText = asciichart.plot([upperBand, lowerBand, candles], {
+            colors: [
+                asciichart.red,
+                asciichart.green,
+                asciichart.default
+            ],
+            height: 20,
+            format: function (x, i) { return (x.toFixed(precision.price)) }
+        })
+        //chartBox.setSizeAndPosition({ x: 0, y: watchBox.outputY + watchBox.outputHeight + 2, width: term.width - 1, height: 10 })
+        chartBox.setContent(chartText, 'legacyAnsi')
+    }
+
     terminal.on('key', function (name, matches, data) {
+        let symbol, market
         switch (name) {
             case 'UP':
                 marketsTable.removeStyle(selected)
                 selected.row--
                 if (selected.row < 2) selected.row = watchdog.markets.length - 1 + 2
                 marketsTable.applyStyle(selected)
-                marketsTable.drawStyles()
+                symbol = marketsTable.data[selected.row - 2].symbol
+                market = watchdog.markets.find(m => m.symbol === symbol)
+                drawChart(market)
+                resize()
                 break
             case 'DOWN':
                 marketsTable.removeStyle(selected)
@@ -292,7 +356,10 @@ async function cliWatch(markets) {
                 if (selected.row >= watchdog.markets.length + 2) selected.row = 2
                 if (selected.row < 2) selected.row = 2
                 marketsTable.applyStyle(selected)
-                marketsTable.drawStyles()
+                symbol = marketsTable.data[selected.row - 2].symbol
+                market = watchdog.markets.find(m => m.symbol === symbol)
+                drawChart(market)
+                resize()
                 break
             default:
                 messageBox.setContent(`key ${name} ...`)
@@ -304,7 +371,16 @@ async function cliWatch(markets) {
     resize()
     if (!watchdog.initialized) await watchdog.initialize()
     // run tasks in parallel
-    await Promise.all([watchdog.watch(), watchdog.analyze()])
+    watchdog.queue.push(...watchdog.markets)
+    try {
+        await Promise.all([watchdog.watch(), watchdog.analyze()])
+    } catch (error) {
+        terminal.grabInput(false)
+        terminal.hideCursor(false)
+        terminal.styleReset()
+        terminal.moveTo(1, terminal.height - 1)
+        console.error(error)
+    }
 
 }
 

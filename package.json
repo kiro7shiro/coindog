@@ -19,6 +19,7 @@
   },
   "homepage": "https://github.com/kiro7shiro/coindog#readme",
   "dependencies": {
+    "asciichart": "^1.5.25",
     "ccxt": "^1.71.96",
     "commander": "^9.0.0",
     "easy-table": "^1.2.0",
