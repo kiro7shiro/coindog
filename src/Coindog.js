@@ -3,9 +3,9 @@ const path = require('path')
 const EventEmitter = require('events')
 const ccxt = require('ccxt')
 const Fuse = require('fuse.js')
-const { Candle, Candles } = require('./Candles.js')
+const { Candles } = require('./Candles.js')
 const { Supertrend } = require('./Trends.js')
-const { buyOrSell, candleRate } = require('./Signals.js')
+const { buyOrSell } = require('./Signals.js')
 
 /**
  * Currently only supports bitfinex v2
@@ -18,7 +18,7 @@ class Coindog extends EventEmitter {
         '1h': 1000 * 60 * 60
     }
 
-    constructor(credentials, { dataPath = '../data' } = {}) {
+    constructor(credentials, { dataPath = '../data', sandbox = false } = {}) {
         super()
         this.key = credentials.key
         this.secret = credentials.secret
@@ -27,9 +27,10 @@ class Coindog extends EventEmitter {
             secret: this.secret,
             enableRateLimit: true
         })
-        this.sandbox = false
+        this.sandbox = sandbox
         this.balance = undefined
         this.markets = []
+        this.orders = []
         this.queue = []
         this.dataPath = dataPath
         this.timer = {
@@ -59,12 +60,13 @@ class Coindog extends EventEmitter {
                 const market = self.markets[mCnt]
                 if (market.candles && market.candles.length) {
                     self.emit('analyzing', market.symbol)
+                    market.position = self.inPosition(market)
                     Supertrend(market)
                     buyOrSell(market)
                     const lastCandle = market.candles.lastCandle
                     const eventData = {
                         symbol: market.symbol,
-                        position: self.inPosition(market),
+                        position: market.position,
                         trend: lastCandle?.uptrend || false,
                         signal: lastCandle?.signal || 'WAIT',
                         rate: market.candles.rate.toFixed(2)
@@ -93,8 +95,9 @@ class Coindog extends EventEmitter {
 
     inPosition(market) {
         const { limits, base } = market
-        if (this.balance.free[base]) {
-            return this.balance.free[base] > limits.amount.min || this.balance.used[base] > limits.amount.min
+        if (!this.balance[base]) this.balance[base] = { free: 0, used: 0, total: 0 }
+        if (this.balance[base].free) {
+            return this.balance[base].free > limits.amount.min || this.balance[base].used > limits.amount.min
         }
         return false
     }
@@ -109,6 +112,61 @@ class Coindog extends EventEmitter {
     async loadBalance() {
         this.balance = await this.exchange.fetchBalance()
         return this.balance
+    }
+
+    async makeOrders(info) {
+
+        const round = function (val, digits = 0) {
+            const mult = Math.pow(10, digits)
+            return Math.round(val * mult) / mult
+        }
+        const { symbol, signal } = info
+        const [market] = this.markets.filter(m => m.symbol === symbol)
+        const { base, quote, limits, precision } = market
+        const { close } = market.candles.lastCandle
+        const lastOrder = this.orders.reverse().find(function (o) {
+            return o.symbol === symbol && o.signal !== signal
+        })
+        // don't forget to reverse ;)
+        this.orders.reverse()
+        const order = {
+            symbol,
+            signal,
+            close,
+            amount: 0,
+            price: 0,
+            delta: 0
+        }
+
+        if (!this.balance[base]) this.balance[base] = { free: 0, used: 0, total: 0 }
+
+        if (signal === 'BUY' && this.balance.free[quote] > 0) {
+            //order.amount = this.balance.free[quote] / close
+            order.amount = 50 / close
+            order.price = close * order.amount
+            order.amount = round(order.amount, precision.amount)
+            order.price = round(order.price, precision.price)
+            if (order.amount >= limits.amount.min && order.price >= limits.price.min && this.balance[quote].free >= order.price) {
+                if (lastOrder) order.delta = lastOrder.price - order.price
+                this.balance[base].free += order.amount
+                this.balance[quote].free -= order.price
+                this.orders.push(order)
+                this.emit('order', order)
+            }
+        } else if (signal === 'SELL') {
+            order.amount = this.balance[base].free
+            order.price = close * order.amount
+            order.amount = round(order.amount, precision.amount)
+            order.price = round(order.price, precision.price)
+            if (order.amount >= limits.amount.min && order.price >= limits.price.min) {
+                if (lastOrder) order.delta = order.price - lastOrder.price
+                this.balance[base].free -= order.amount
+                this.balance[quote].free += order.price
+                this.orders.push(order)
+                this.emit('order', order)
+            }
+        }
+
     }
 
     async remove(symbol) {
@@ -176,7 +234,7 @@ class Coindog extends EventEmitter {
             if (queue.length) {
 
                 const market = queue.shift()
-                
+
                 if (!market.candles) market.candles = new Candles({ max: maxCandles })
                 if (!market.counter) market.counter = {
                     last: 0,

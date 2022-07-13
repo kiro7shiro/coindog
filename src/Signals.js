@@ -11,18 +11,18 @@ class Signals {
         for (let cCnt = period + 1; cCnt < market.candles.length; cCnt++) {
             const prev = market.candles[cCnt - 1]
             const curr = market.candles[cCnt]
-            if (curr.signal) continue
+            //if (curr.signal) continue
             switch (true) {
-                case !prev.uptrend && curr.uptrend && !market.inPosition:
+                case !prev.uptrend && curr.uptrend && !market.position:
                     curr.signal = 'BUY'
                     break
-                case prev.uptrend && !curr.uptrend && market.inPosition:
+                case prev.uptrend && !curr.uptrend && market.position:
                     curr.signal = 'SELL'
                     break
-                case curr.uptrend && !market.inPosition:
+                case curr.uptrend && !market.position:
                     curr.signal = 'BUY'
                     break
-                case !curr.uptrend && market.inPosition:
+                case !curr.uptrend && market.position:
                     curr.signal = 'SELL'
                     break
                 default:

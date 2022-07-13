@@ -1,4 +1,3 @@
-const _object = require('lodash/object')
 const termkit = require('../node_modules/terminal-kit/lib/termkit.js')
 const terminal = termkit.terminal
 const asciichart = require('asciichart')
@@ -8,7 +7,7 @@ const credentials = require('../credentials/credentials.js')
 const { Coindog } = require('../src/Coindog.js')
 
 
-const watchdog = new Coindog(credentials.BITFINEX, '../data/symbols.json')
+const watchdog = new Coindog(credentials.BITFINEX)
 
 // *helper functions
 
@@ -175,6 +174,17 @@ async function cliWatch(markets) {
         attr: { bgColor: 'default' }
     })
 
+    const ordersBox = new termkit.TextBox({
+        parent: document,
+        content: '',
+        contentHasMarkup: 'legacyAnsi',
+        x: 0,
+        y: 0,
+        attr: { bgColor: 'default' },
+        scrollable: true,
+        vScrollBar: true
+    })
+
     const messageBox = new termkit.TextBox({
         parent: document,
         content: '',
@@ -213,6 +223,12 @@ async function cliWatch(markets) {
             height: balanceHeight,
             width: width / 4
         })
+        ordersBox.setSizeAndPosition({
+            x: marketsTable.outputWidth + 4,
+            y: height / 2,
+            height: 10,
+            width: width / 2
+        })
         messageBox.setSizeAndPosition({
             x: 1,
             y: height - 2,
@@ -246,6 +262,12 @@ async function cliWatch(markets) {
         messageBox.setContent(`fetching ${info.symbol} ...done`)
         marketsTable.update([info])
         highlight.row = marketsTable.data.findIndex(m => m.symbol === info.symbol) + 2
+        if (highlight.row === selected.row) {
+            // update chart too
+            const symbol = marketsTable.data[selected.row - 2].symbol
+            const market = watchdog.markets.find(m => m.symbol === symbol)
+            drawChart(market)
+        }
         marketsTable.applyStyle(highlight)
         resize()
     })
@@ -253,7 +275,7 @@ async function cliWatch(markets) {
     watchdog.on('analyzed', function (info) {
         marketsTable.update([info])
         const row = marketsTable.data.findIndex(m => m.symbol === info.symbol) + 2
-        if (info.position === 'true') {
+        if (info.position) {
             marketsTable.applyStyle(new TableStyle({
                 row,
                 cell: 6,
@@ -284,6 +306,17 @@ async function cliWatch(markets) {
             }))
         }
         resize()
+        watchdog.makeOrders(info)
+
+    })
+
+    watchdog.on('order', function (order) {
+        let ordersText = Table.print(this.orders)
+        ordersBox.setContent(ordersText)
+        let balanceText = balanceToTable(watchdog.balance)
+        balanceBox.setContent(balanceText)
+        resize()
+        ordersBox.scrollToBottom()
     })
 
     watchdog.on('pause', function (info) {
@@ -370,9 +403,9 @@ async function cliWatch(markets) {
     // *start
     resize()
     if (!watchdog.initialized) await watchdog.initialize()
-    // run tasks in parallel
     watchdog.queue.push(...watchdog.markets)
     try {
+        // run tasks in parallel
         await Promise.all([watchdog.watch(), watchdog.analyze()])
     } catch (error) {
         terminal.grabInput(false)
