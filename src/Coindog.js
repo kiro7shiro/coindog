@@ -12,12 +12,6 @@ const { buyOrSell } = require('./Signals.js')
  */
 class Coindog extends EventEmitter {
 
-    static timespans = {
-        '1s': 1000,
-        '1m': 1000 * 60,
-        '1h': 1000 * 60 * 60
-    }
-
     constructor(credentials, { dataPath = '../data', sandbox = false } = {}) {
         super()
         this.key = credentials.key
@@ -44,6 +38,7 @@ class Coindog extends EventEmitter {
             lastFrame: 0,
             timeout: 1000 / 30,
         }
+        this.timespans = undefined
         this.timeframes = undefined
         this.running = false
         this.initialized = false
@@ -86,7 +81,41 @@ class Coindog extends EventEmitter {
             this.emit('initializing')
             if (!this.balance) await this.loadBalance()
             if (!this.exchange.markets) await this.exchange.loadMarkets()
-            this.timeframes = this.exchange.timeframes
+            // convert exchange time frames to milliseconds
+            const { timeframes } = this.exchange
+            this.timeframes = {}
+            this.timespans = {}
+            const second = 1000
+            const minute = second * 60
+            const hour = minute * 60
+            const day = hour * 24
+            for (let [timeframe, label] of Object.entries(timeframes)) {
+                const [unit] = timeframe.slice(-1)
+                const [number] = timeframe.split(unit)
+                switch (unit) {
+                    case 'm':
+                        this.timespans[label] = Number(number) * minute
+                        break
+                    case 'h':
+                        this.timespans[label] = Number(number) * hour
+                        break
+                    case 'd':
+                        this.timespans[label] = Number(number) * day
+                        break
+                    case 'w':
+                        if (number === '1') {
+                            this.timespans[label] = Number(number) * day * 7
+                        } else {
+                            this.timespans[label] = Number(number) * day * 14
+                        }
+                        break
+                    case 'M':
+                        this.timespans[label] = Number(number) * day * 30
+                        break
+                }
+
+            }
+            this.timeframes = timeframes
             this.load()
             this.initialized = true
             this.emit('initialized')
@@ -220,88 +249,93 @@ class Coindog extends EventEmitter {
         fs.writeFileSync(file, JSON.stringify(candles, null, 4))
     }
 
-    async watch({ timespan = 60, timeframe = 1 } = {}) {
+    /* '1m': 60000,
+    '5m': 300000,
+    '15m': 900000,
+    '30m': 1800000,
+    '1h': 3600000,
+    '3h': 10800000,
+    '4h': 14400000,
+    '6h': 21600000,
+    '12h': 43200000,
+    '1D': 86400000,
+    '7D': 604800000,
+    '14D': 2419200000,
+    '1M': 2592000000 */
+
+    async watch() {
 
         const self = this
         const timer = self.timer
-        const maxCandles = timespan / timeframe
-        const fetchTimeout = 60000 * timeframe
         const queue = self.queue
-        let now = Date.now()
 
         return new Promise(async function (resolve, reject) {
 
             if (queue.length) {
 
                 const market = queue.shift()
-
-                if (!market.candles) market.candles = new Candles({ max: maxCandles })
-                if (!market.counter) market.counter = {
-                    last: 0,
-                    requests: 0,
-                    rpm: 0,
-                    timeout: Coindog.timespans['1m']
+                if (!market.timer) market.timer = {
+                    timespan: self.timespans['1h'],
+                    timeframe: '1m'
                 }
+                const { timespan, timeframe } = market.timer
+                if (!market.candles) market.candles = new Candles({ max: timespan / self.timespans[timeframe] })
                 if (!market.limiter) market.limiter = {
                     last: 0,
-                    limit: 90 / 60 * 1000 + 25
+                    limit: 90 / self.timespans['1m'] * 1000,
+                    requests: 0,
+                    rpm: 0,
+                    lastRpm: 0
                 }
-
-                const counter = market.counter
                 const limiter = market.limiter
                 let lastCandle = market.candles.lastCandle
 
-                if (limiter.last + limiter.limit <= now) {
-
-                    const since = lastCandle ? lastCandle.timestamp : now - Coindog.timespans['1h']
+                if (limiter.last + limiter.limit <= Date.now()) {
+                    const since = lastCandle ? lastCandle.timestamp : Date.now() - timespan
                     self.emit('fetching', market.symbol)
                     let fetched = []
                     try {
-                        fetched = await self.exchange.fetchOHLCV(market.symbol, self.timeframes[0], since)
+                        fetched = await self.exchange.fetchOHLCV(market.symbol, timeframe, since)
+                        limiter.last = Date.now()
+                        limiter.requests++
                     } catch (error) {
                         reject(error)
                     }
-                    now = Date.now()
                     market.candles.add(fetched)
                     // emit data
-                    counter.requests++
                     let firstCandle = market.candles.firstCandle
                     lastCandle = market.candles.lastCandle
-                    if (!firstCandle) firstCandle = { timestamp: now - Coindog.timespans['1h'] }
-                    if (!lastCandle) lastCandle = { timestamp: now }
+                    if (!firstCandle) firstCandle = { timestamp: Date.now() - self.timespans['1h'] }
+                    if (!lastCandle) lastCandle = { timestamp: Date.now() }
                     const eventData = {
                         symbol: market.symbol,
                         first: new Date(firstCandle.timestamp).toLocaleTimeString(),
                         last: new Date(lastCandle.timestamp).toLocaleTimeString(),
                         fetched: `${fetched.length}/${market.candles.length}`,
-                        rpm: counter.rpm.toFixed(2)
+                        rpm: limiter.rpm.toFixed(2)
                     }
                     self.emit('fetched', eventData)
-                    limiter.last = now
-
                 }
-
-                counter.rpm = counter.rpm * 0.75 + counter.requests * 0.25
-                if (counter.last + counter.timeout <= now) {
-                    counter.requests = 0
-                    counter.last = now
+                limiter.rpm = limiter.rpm * 0.75 + limiter.requests * 0.25
+                if (limiter.lastRpm + self.timespans['1m'] <= Date.now()) {
+                    limiter.requests = 0
+                    limiter.lastRpm = Date.now()
                 }
-                if (lastCandle.timestamp + fetchTimeout <= now) {
+                if (lastCandle.timestamp + self.timespans[timeframe] <= limiter.last) {
                     queue.push(market)
                 } else {
-                    setTimeout(() => queue.push(market), fetchTimeout)
+                    setTimeout(() => queue.push(market), self.timespans[timeframe])
                 }
-
             }
 
             timer.frames++
-            timer.diff = now - timer.lastFrame
-            if (timer.last + 1000 <= now) {
+            timer.diff = Date.now() - timer.lastFrame
+            if (timer.last + 1000 <= Date.now()) {
                 timer.fps = timer.fps * 0.75 + timer.frames * 0.25
                 timer.frames = 0
-                timer.last = now
+                timer.last = Date.now()
             }
-            timer.lastFrame = now
+            timer.lastFrame = Date.now()
 
             const eventData = {
                 timeout: timer.diff,

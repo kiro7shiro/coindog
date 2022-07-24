@@ -135,7 +135,11 @@
         "swap": false,
         "spot": true,
         "margin": true,
-        "future": false
+        "future": false,
+        "timer": {
+            "timespan": 7200000,
+            "timeframe": "1m"
+        }
     },
     {
         "limits": {
@@ -273,7 +277,11 @@
         "swap": false,
         "spot": true,
         "margin": true,
-        "future": false
+        "future": false,
+        "timer": {
+            "timespan": 7200000,
+            "timeframe": "1m"
+        }
     },
     {
         "limits": {
@@ -411,7 +419,11 @@
         "swap": false,
         "spot": true,
         "margin": false,
-        "future": false
+        "future": false,
+        "timer": {
+            "timespan": 7200000,
+            "timeframe": "1m"
+        }
     },
     {
         "limits": {
@@ -549,7 +561,11 @@
         "swap": false,
         "spot": true,
         "margin": true,
-        "future": false
+        "future": false,
+        "timer": {
+            "timespan": 7200000,
+            "timeframe": "1m"
+        }
     },
     {
         "limits": {
@@ -687,7 +703,11 @@
         "swap": false,
         "spot": true,
         "margin": true,
-        "future": false
+        "future": false,
+        "timer": {
+            "timespan": 7200000,
+            "timeframe": "1m"
+        }
     },
     {
         "limits": {
@@ -1101,6 +1121,10 @@
         "swap": false,
         "spot": true,
         "margin": true,
-        "future": false
+        "future": false,
+        "timer": {
+            "timespan": 7200000,
+            "timeframe": "1m"
+        }
     }
 ]

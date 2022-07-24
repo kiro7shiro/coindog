@@ -6,7 +6,6 @@ const { TableColors, TableStyle, MarketsTable } = require('./cli-ui/MarketsTable
 const credentials = require('../credentials/credentials.js')
 const { Coindog } = require('../src/Coindog.js')
 
-
 const watchdog = new Coindog(credentials.BITFINEX)
 
 // *helper functions
@@ -58,6 +57,7 @@ async function cliInfo() {
     const symbols = Object.keys(watchdog.exchange.markets)
     terminal(`markets: ${symbols.length}\n`)
     console.log({ timeframes: watchdog.timeframes })
+    console.log({ timeSpans: watchdog.timespans })
     //terminal(`timeframes: ${watchdog.timeframes}\n\n`)
     // print balance info
     terminal('loading balance... ')
@@ -258,6 +258,7 @@ async function cliWatch(markets) {
         color: TableColors.black,
         bgColor: TableColors.bgWhite
     })
+    
     watchdog.on('fetched', function (info) {
         messageBox.setContent(`fetching ${info.symbol} ...done`)
         marketsTable.update([info])
@@ -307,7 +308,6 @@ async function cliWatch(markets) {
         }
         resize()
         watchdog.makeOrders(info)
-
     })
 
     watchdog.on('order', function (order) {
@@ -336,6 +336,7 @@ async function cliWatch(markets) {
     })
 
     function drawChart(market) {
+        // TODO : add error check for no candles to plot
         let candles = market.candles.reduce(function (prev, curr) {
             prev.push(curr.close)
             return prev
