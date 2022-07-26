@@ -211,11 +211,13 @@ async function cliWatch(markets) {
             height: height / 2,
             width: marketsWidth
         })
+        const chartContentWidth = chartBox.getContent().split('\n')[0].length
+        const chartWidth = chartContentWidth > (width / 2) ? (width / 2) : chartContentWidth
         chartBox.setSizeAndPosition({
             x: marketsTable.outputWidth + 4,
             y: timerBox.outputY + 2,
             height: height / 2,
-            width: chartBox.getContent().split('\n')[0].length
+            width: chartWidth
         })
         balanceBox.setSizeAndPosition({
             x: 1,
@@ -258,18 +260,18 @@ async function cliWatch(markets) {
         color: TableColors.black,
         bgColor: TableColors.bgWhite
     })
-    
+
     watchdog.on('fetched', function (info) {
         messageBox.setContent(`fetching ${info.symbol} ...done`)
         marketsTable.update([info])
         highlight.row = marketsTable.data.findIndex(m => m.symbol === info.symbol) + 2
+        marketsTable.applyStyle(highlight)
         if (highlight.row === selected.row) {
             // update chart too
             const symbol = marketsTable.data[selected.row - 2].symbol
             const market = watchdog.markets.find(m => m.symbol === symbol)
             drawChart(market)
         }
-        marketsTable.applyStyle(highlight)
         resize()
     })
 
@@ -307,16 +309,20 @@ async function cliWatch(markets) {
             }))
         }
         resize()
-        watchdog.makeOrders(info)
+        if (info.rate >= 0.45) {
+            watchdog.makeOrders(info)
+        }
     })
 
     watchdog.on('order', function (order) {
+        this.orders.reverse()
         let ordersText = Table.print(this.orders)
+        this.orders.reverse()
         ordersBox.setContent(ordersText)
         let balanceText = balanceToTable(watchdog.balance)
         balanceBox.setContent(balanceText)
         resize()
-        ordersBox.scrollToBottom()
+        //ordersBox.scrollToBottom()
     })
 
     watchdog.on('pause', function (info) {
@@ -358,6 +364,10 @@ async function cliWatch(markets) {
             return prev
         }, [])
         const { precision } = market
+        const maxWidth = terminal.width / 2
+        candles = candles.slice(candles.length > maxWidth ? -maxWidth : 0)
+        upperBand = upperBand.slice(upperBand.length > maxWidth ? -maxWidth : 0)
+        lowerBand = lowerBand.slice(lowerBand.length > maxWidth ? -maxWidth : 0)
         let chartText = asciichart.plot([upperBand, lowerBand, candles], {
             colors: [
                 asciichart.red,

@@ -137,7 +137,7 @@
         "margin": true,
         "future": false,
         "timer": {
-            "timespan": 7200000,
+            "timespan": 14400000,
             "timeframe": "1m"
         }
     },
@@ -279,7 +279,7 @@
         "margin": true,
         "future": false,
         "timer": {
-            "timespan": 7200000,
+            "timespan": 14400000,
             "timeframe": "1m"
         }
     },
@@ -421,7 +421,7 @@
         "margin": false,
         "future": false,
         "timer": {
-            "timespan": 7200000,
+            "timespan": 14400000,
             "timeframe": "1m"
         }
     },
@@ -563,7 +563,7 @@
         "margin": true,
         "future": false,
         "timer": {
-            "timespan": 7200000,
+            "timespan": 14400000,
             "timeframe": "1m"
         }
     },
@@ -705,7 +705,7 @@
         "margin": true,
         "future": false,
         "timer": {
-            "timespan": 7200000,
+            "timespan": 14400000,
             "timeframe": "1m"
         }
     },
@@ -1123,7 +1123,7 @@
         "margin": true,
         "future": false,
         "timer": {
-            "timespan": 7200000,
+            "timespan": 14400000,
             "timeframe": "1m"
         }
     }

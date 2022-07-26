@@ -279,7 +279,8 @@ class Coindog extends EventEmitter {
                     timeframe: '1m'
                 }
                 const { timespan, timeframe } = market.timer
-                if (!market.candles) market.candles = new Candles({ max: timespan / self.timespans[timeframe] })
+                const maxCandles = timespan / self.timespans[timeframe]
+                if (!market.candles) market.candles = new Candles({ max: maxCandles })
                 if (!market.limiter) market.limiter = {
                     last: 0,
                     limit: 90 / self.timespans['1m'] * 1000,
@@ -311,7 +312,7 @@ class Coindog extends EventEmitter {
                         symbol: market.symbol,
                         first: new Date(firstCandle.timestamp).toLocaleTimeString(),
                         last: new Date(lastCandle.timestamp).toLocaleTimeString(),
-                        fetched: `${fetched.length}/${market.candles.length}`,
+                        fetched: `${market.candles.length}/${maxCandles}`,
                         rpm: limiter.rpm.toFixed(2)
                     }
                     self.emit('fetched', eventData)
